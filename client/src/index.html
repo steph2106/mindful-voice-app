@@ -5,39 +5,83 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MindfulVoice</title>
     <style>
-        /* Desain minimalis agar tidak berantakan */
-        body { font-family: sans-serif; background: #f0fdf4; display: flex; justify-content: center; padding: 20px; }
-        .card { background: white; padding: 2rem; border-radius: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
-        button { width: 100%; padding: 15px; margin: 10px 0; border-radius: 10px; border: none; cursor: pointer; font-weight: bold; }
+        /* Desain internal agar langsung rapi */
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: #f0fdf4; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            margin: 0; 
+        }
+        .card { 
+            background: white; 
+            padding: 2.5rem; 
+            border-radius: 24px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05); 
+            width: 100%; 
+            max-width: 400px; 
+            text-align: center; 
+        }
+        h1 { color: #166534; margin-bottom: 1rem; }
+        
+        /* Tombol Utama */
+        button { 
+            width: 100%; 
+            padding: 16px; 
+            margin: 8px 0; 
+            border-radius: 12px; 
+            border: none; 
+            cursor: pointer; 
+            font-size: 1rem; 
+            font-weight: 600; 
+            transition: 0.3s; 
+        }
         #btnAction { background: #22c55e; color: white; }
-        #btnMusic { background: #e2e8f0; color: #475569; }
-        #aiResponse { margin-top: 20px; padding: 15px; background: #f8fafc; border-radius: 10px; text-align: left; min-height: 50px; }
+        #btnAction:hover { background: #16a34a; }
+        
+        #btnMusic { background: #f1f5f9; color: #475569; }
+        
+        #status { color: #64748b; font-style: italic; margin: 15px 0; }
+        
+        /* Area Respon AI */
+        .response-box { 
+            margin-top: 20px; 
+            padding: 15px; 
+            background: #f8fafc; 
+            border-radius: 12px; 
+            text-align: left; 
+            border-left: 4px solid #22c55e;
+        }
+        #aiResponse { color: #334155; line-height: 1.5; }
     </style>
 </head>
 <body>
 
     <div class="card">
-    <h1>MindfulVoice</h1>
-    
-    <button id="btnAction" class="btn-record">Mulai Bicara</button>
-    
-    <button id="btnMusic" class="btn-secondary">🎵 Musik Latar</button>
+        <h1>MindfulVoice</h1>
+        
+        <button id="btnAction">Mulai Bicara</button>
+        
+        <button id="btnMusic">🎵 Putar Musik Latar</button>
 
-    <p id="status">Siap mendengarkan...</p>
+        <p id="status">Siap mendengarkan...</p>
 
         <audio id="bgMusic" loop></audio>
 
-        <div class="response-container">
-            <strong>Respon AI:</strong>
-            <div id="aiResponse">Menunggu cerita kamu...</div>
+        <div class="response-box">
+            <strong style="display:block; margin-bottom: 5px;">Respon Teman AI:</strong>
+            <div id="aiResponse">Ceritakan apa yang kamu rasakan...</div>
         </div>
     </div>
 
-    <script src="app.js"></script>
-    
     <script>
         // Instruksi untuk AI (System Prompt)
-        const SYSTEM_PROMPT = "Kamu adalah pendengar yang empati. Berikan respon yang menenangkan dan singkat.";
+        const SYSTEM_PROMPT = "Kamu adalah teman curhat yang empati. Gunakan bahasa Indonesia yang menenangkan.";
     </script>
+    
+    <script src="app.js"></script>
+
 </body>
 </html>
