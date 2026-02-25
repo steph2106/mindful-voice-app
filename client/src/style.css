@@ -1,0 +1,61 @@
+/* Desain Menenangkan untuk MindfulVoice */
+body {
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(135deg, #e0f2f1 0%, #f1f8e9 100%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    color: #37474f;
+}
+
+.container {
+    background: rgba(255, 255, 255, 0.9);
+    padding: 2rem;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+    text-align: center;
+    width: 90%;
+    max-width: 450px;
+}
+
+h1 { color: #2e7d32; margin-bottom: 0.5rem; }
+p { color: #546e7a; margin-bottom: 2rem; }
+
+/* Desain Tombol Utama */
+.btn-record {
+    background-color: #4caf50;
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    font-size: 1.1rem;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    width: 100%;
+    margin-bottom: 1rem;
+}
+
+.btn-record:hover { background-color: #45a049; transform: scale(1.02); }
+
+.btn-secondary {
+    background: none;
+    border: 1px solid #cfd8dc;
+    padding: 10px 20px;
+    border-radius: 50px;
+    cursor: pointer;
+    color: #78909c;
+}
+
+/* Kotak Respon AI */
+.response-container {
+    margin-top: 2rem;
+    text-align: left;
+    background: #f9fbe7;
+    padding: 1.5rem;
+    border-radius: 15px;
+    border-left: 5px solid #c0ca33;
+}
+
+.ai-text { line-height: 1.6; font-style: italic; }
