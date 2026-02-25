@@ -137,12 +137,32 @@ function setupFitur() {
     const status = document.getElementById('status');
     const btnMusic = document.getElementById('btnMusic');
     const bgMusic = document.getElementById('bgMusic');
-// Tambahkan ini di bawah baris 139
-bgMusic.src = 'https://ntxvoxscznwovxhelyrv.supabase.co/storage/v1/object/public/assets/Clearing%20the%20Mind.mp3';
-    btnMusic.onclick = () => {
-        if (bgMusic.paused) { bgMusic.play(); btnMusic.innerText = "Matikan Musik 🔇"; }
-        else { bgMusic.pause(); btnMusic.innerText = "Mulai Musik 🎵"; }
-    };
+// Tambahkan pengaturan volume awal di baris 141 yang tadi
+bgMusic.src = 'https://ntxvoxscznwovxhelyrv.supabase.co/storage/v1/object/public/assets/Clearing%20the%20Mind.mp3'; 
+bgMusic.volume = 0.3; // Volume normal musik latar
+
+async function startRecording() {
+    // 1. Kecilkan volume musik saat mulai rekam
+    bgMusic.volume = 0.1; 
+
+    // 2. Optimalkan kualitas Mic (Noise Suppression)
+    const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+        } 
+    });
+
+    // ... sisa kode mediaRecorder kamu ...
+}
+
+async function stopRecording() {
+    // ... kode stop recording kamu ...
+
+    // 3. Kembalikan volume musik setelah selesai rekam
+    bgMusic.volume = 0.3; 
+}
 
     if (recognizer) {
         recognizer.onresult = (event) => {
