@@ -3,12 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MindfulVoice App</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>MindfulVoice - Teman Cerita AI</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
 </head>
-<body class="bg-[#FDFBF7]">
-    <div id="app"></div>
-    
-    <script type="module" src="app.js"></script>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>MindfulVoice</h1>
+            <p>Ceritakan apa yang kamu rasakan hari ini.</p>
+        </header>
+
+        <main>
+            <div class="visualizer-container">
+                <div id="visualizer"></div>
+            </div>
+
+            <div class="controls">
+                <button id="recordBtn" class="btn-record">Mulai Bicara</button>
+                <button id="musicToggle" class="btn-secondary">🎵 Musik: ON</button>
+            </div>
+
+            <div id="status" class="status-text">Siap mendengarkan...</div>
+
+            <audio id="bgMusic" loop></audio>
+
+            <div class="response-container">
+                <h3>Respon Teman AI:</h3>
+                <div id="aiResponse" class="ai-text">
+                    Respon akan muncul di sini setelah kamu selesai bercerita...
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Ini adalah instruksi agar AI tahu cara merespon keluhan
+        const SYSTEM_PROMPT = `
+            Kamu adalah seorang pendengar yang empati, tenang, dan bijaksana. 
+            Tugasmu adalah mendengarkan keluhan pengguna dan memberikan respon yang:
+            1. Memvalidasi perasaan mereka (contoh: "Aku mengerti itu pasti terasa berat...").
+            2. Memberikan kata-kata penyemangat yang lembut.
+            3. Memberikan satu saran praktis kecil untuk menenangkan pikiran.
+            4. Jangan memberikan diagnosa medis, tetaplah menjadi teman cerita yang baik.
+            Gunakan bahasa Indonesia yang santai namun sopan.
+        `;
+    </script>
+
+    <script src="app.js"></script>
 </body>
 </html>
