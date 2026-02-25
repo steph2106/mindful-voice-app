@@ -1,12 +1,10 @@
-// client/src/app.js
 import { dailyPrompts } from './prompts.js';
 
-// --- KONFIGURASI KUNCI ---
+// --- KONFIGURASI ---
 const SUPABASE_URL = 'https://ntxvoxscznwovxhelyrv.supabase.co'; 
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im50eHZveHNjem53b3Z4aGVseXJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE5NzA4ODUsImV4cCI6MjA4NzU0Njg4NX0.aHCqqAqXz_YQbzCy7qQ7D6IGXZUj-7zOoP40EE4Sg0I';
 const GEMINI_API_KEY = 'AIzaSyC5OVWRrSJZMHt_7uXMC7e1lU5hTMng8_U'; 
 const MUSIC_URL = 'https://ntxvoxscznwovxhelyrv.supabase.co/storage/v1/object/public/assets/Clearing%20the%20Mind.mp3';
-// -------------------------
 
 const appDiv = document.getElementById('app');
 let mediaRecorder;
@@ -21,11 +19,7 @@ if (recognizer) {
     recognizer.interimResults = true;
 }
 
-if (!localStorage.getItem('user_voice_id')) {
-    localStorage.setItem('user_voice_id', 'user-' + Math.random().toString(36).substr(2, 9));
-}
-const userId = localStorage.getItem('user_voice_id');
-
+// --- FUNGSI UTAMA ---
 function tampilkanAplikasi() {
     const hariIni = 1; 
     const dataSoal = dailyPrompts.find(p => p.day === hariIni);
@@ -39,31 +33,29 @@ function tampilkanAplikasi() {
                     <button id="btnMusic" class="text-[10px] bg-gray-100 px-3 py-1 rounded-full text-gray-500">Mulai Musik 🎵</button>
                 </div>
                 
-                <div class="p-6 bg-[#FDFBF7] rounded-2xl border-l-4 border-[#8FBC8F] mb-6 text-left shadow-sm">
-                    <p class="text-[10px] uppercase tracking-widest text-gray-400 mb-2">${dataSoal.focus}</p>
-                    <p class="text-lg italic text-[#4A5D4F] leading-relaxed">"${dataSoal.text}"</p>
+                <div class="p-6 bg-[#FDFBF7] rounded-2xl border-l-4 border-[#8FBC8F] mb-6 text-left">
+                    <p class="text-[10px] uppercase text-gray-400 mb-2">${dataSoal.focus}</p>
+                    <p class="text-lg italic text-[#4A5D4F]">"${dataSoal.text}"</p>
                 </div>
 
-                <div id="textPreview" class="mb-4 text-xs text-gray-400 italic min-h-[20px]"></div>
-                <div id="status" class="hidden mb-4 text-red-500 animate-pulse font-bold text-sm">● AI sedang mendengarkan...</div>
+                <div id="textPreview" class="mb-4 text-[10px] text-gray-400 italic"></div>
+                <div id="status" class="hidden mb-4 text-red-500 animate-pulse text-sm">● Mendengarkan...</div>
                 
-                <button id="btnAction" class="w-full py-4 bg-[#8FBC8F] text-white rounded-full font-bold shadow-lg transition-all mb-4 hover:opacity-90">
-                    Mulai Bicara
-                </button>
+                <button id="btnAction" class="w-full py-4 bg-[#8FBC8F] text-white rounded-full font-bold shadow-lg mb-4">Mulai Bicara</button>
 
                 <div class="relative mb-6">
                     <textarea id="manualInput" placeholder="Atau ketik ceritamu di sini..." 
-                        class="w-full p-4 rounded-2xl border border-gray-100 text-sm focus:ring-2 focus:ring-[#8FBC8F] outline-none bg-gray-50 min-h-[100px] resize-none"></textarea>
-                    <button id="btnSendText" class="absolute bottom-3 right-3 bg-[#4A5D4F] text-white p-2 rounded-xl text-xs font-bold shadow-sm">Kirim Teks</button>
+                        class="w-full p-4 rounded-2xl border border-gray-100 text-sm focus:ring-2 focus:ring-[#8FBC8F] outline-none bg-gray-50 min-h-[80px] resize-none"></textarea>
+                    <button id="btnSendText" class="absolute bottom-2 right-2 bg-[#4A5D4F] text-white px-3 py-1 rounded-lg text-[10px]">Kirim</button>
                 </div>
 
-                <div id="aiResponseArea" class="hidden mt-6 p-6 bg-blue-50 rounded-2xl text-left border border-blue-100 shadow-inner">
-                    <p class="text-[10px] uppercase text-blue-400 font-bold mb-2 tracking-widest">Teman AI Menjawab:</p>
-                    <p id="aiText" class="text-[#3A4A3F] leading-relaxed italic text-sm">Berpikir...</p>
+                <div id="aiResponseArea" class="hidden mt-6 p-5 bg-blue-50 rounded-2xl text-left border border-blue-100">
+                    <p class="text-[10px] uppercase text-blue-400 font-bold mb-1">Respon AI:</p>
+                    <p id="aiText" class="text-[#3A4A3F] text-sm italic"></p>
                 </div>
                 
                 <div class="mt-10 border-t border-gray-100 pt-6">
-                    <h3 class="text-[10px] font-bold text-gray-400 mb-4 uppercase tracking-[2px] text-left">Riwayat Rekaman</h3>
+                    <h3 class="text-[10px] font-bold text-gray-400 mb-4 uppercase text-left">Riwayat Jurnal</h3>
                     <div id="daftarRekaman" class="space-y-3"></div>
                 </div>
             </div>
@@ -73,15 +65,16 @@ function tampilkanAplikasi() {
     }
 }
 
+// --- LOGIKA AI & SIMPAN ---
 async function dapatkanResponAI(teksCerita) {
     const aiTextElement = document.getElementById('aiText');
     const responseArea = document.getElementById('aiResponseArea');
     responseArea.classList.remove('hidden');
-    aiTextElement.innerText = "Merespon ceritamu...";
+    aiTextElement.innerText = "Membaca ceritamu...";
 
     try {
-        const promptSystem = "Kamu adalah MindfulVoice, teman curhat yang hangat. Gunakan bahasa Indonesia santai (aku-kamu).";
-        const promptUser = `Seseorang bercerita: "${teksCerita}". Berikan respon 1-2 kalimat yang sangat nyambung dan empatik.`;
+        const promptSystem = "Kamu adalah teman curhat yang sangat perhatian. DILARANG memberikan jawaban umum.";
+        const promptUser = `PENTING: Pengguna bercerita "${teksCerita}". Jawablah dengan 1-2 kalimat yang sangat spesifik menanggapi isi ceritanya secara empati.`;
 
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
             method: 'POST',
@@ -91,67 +84,50 @@ async function dapatkanResponAI(teksCerita) {
         
         const data = await response.json();
         const hasilAI = data.candidates[0].content.parts[0].text;
-        
-        // Tampilkan di layar
         aiTextElement.innerText = hasilAI;
 
-        // --- SIMPAN SEBAGAI NOTE ---
-        // 1. Simpan ke Riwayat Lokal (Agar muncul di daftar bawah)
+        // Simpan ke Riwayat
         let riwayat = JSON.parse(localStorage.getItem('my_recordings') || '[]');
-        riwayat.unshift({ 
-            name: "Catatan Teks", 
-            content: teksCerita, 
-            aiResponse: hasilAI,
-            date: new Date().toLocaleString('id-ID'),
-            isText: true 
-        });
+        riwayat.unshift({ content: teksCerita, aiResponse: hasilAI, date: new Date().toLocaleString('id-ID'), isText: true });
         localStorage.setItem('my_recordings', JSON.stringify(riwayat));
         updateDaftarUI();
-
-        // 2. Notifikasi ke user bahwa sudah tersimpan
-        console.log("Jurnal disimpan ke Note HP: ", teksCerita);
-        
     } catch (err) {
-        aiTextElement.innerText = "Aku di sini mendengarkanmu. Terima kasih ya sudah mau berbagi sama aku. Pelan-pelan saja ya jalaninnya. Menerima keadaan memang paling sulit di dalam hidup kita. Tetapi setelah kamu terima semuanya itu dengan hati yang lapang, percayalah, kamu sudah maju ke langkah berikutnya";
+        aiTextElement.innerText = "Terima kasih sudah berbagi. Aku di sini untukmu.";
     }
 }
 
-async function uploadKeSupabase(blob) {
-    const fileName = `jurnal-${Date.now()}.wav`;
-    const filePath = `${userId}/${fileName}`;
-    await fetch(`${SUPABASE_URL}/storage/v1/object/recordings/${filePath}`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${SUPABASE_KEY}`, 'apikey': SUPABASE_KEY, 'Content-Type': 'audio/wav' },
-        body: blob
-    });
-    
-    let riwayat = JSON.parse(localStorage.getItem('my_recordings') || '[]');
-    riwayat.unshift({ name: fileName, path: filePath, date: new Date().toLocaleString('id-ID') });
-    localStorage.setItem('my_recordings', JSON.stringify(riwayat));
-    updateDaftarUI();
-}
+// --- FITUR HAPUS & UI ---
+window.hapusRecord = function(index) {
+    if (confirm("Hapus catatan ini?")) {
+        let riwayat = JSON.parse(localStorage.getItem('my_recordings') || '[]');
+        riwayat.splice(index, 1);
+        localStorage.setItem('my_recordings', JSON.stringify(riwayat));
+        updateDaftarUI();
+    }
+};
 
 function updateDaftarUI() {
     const container = document.getElementById('daftarRekaman');
     const riwayat = JSON.parse(localStorage.getItem('my_recordings') || '[]');
-    if (riwayat.length === 0) {
-        container.innerHTML = `<p class="text-left text-[10px] text-gray-300 italic">Belum ada rekaman.</p>`;
-        return;
-    }
-    container.innerHTML = riwayat.map(item => `
-        <div class="flex justify-between items-center p-3 bg-gray-50 rounded-xl border border-gray-100">
-            <span class="text-[10px] font-bold text-gray-500">${item.date}</span>
-            <a href="${SUPABASE_URL}/storage/v1/object/public/recordings/${item.path}" target="_blank" class="text-[10px] bg-white border border-green-200 text-green-600 px-3 py-1 rounded-full font-bold">Putar 🎧</a>
-        </div>
-    `).join('');
+    container.innerHTML = riwayat.length === 0 ? '<p class="text-[10px] text-gray-300 italic text-left">Kosong.</p>' : 
+        riwayat.map((item, index) => `
+            <div class="p-3 bg-gray-50 rounded-xl border border-gray-100 text-left">
+                <div class="flex justify-between items-center mb-1">
+                    <span class="text-[9px] font-bold text-gray-400">${item.date}</span>
+                    <button onclick="hapusRecord(${index})" class="text-[9px] text-red-400">Hapus ×</button>
+                </div>
+                <p class="text-[11px] text-[#4A5D4F] line-clamp-2">${item.isText ? item.content : 'Rekaman Suara'}</p>
+                <p class="text-[10px] italic text-blue-500 mt-1">${item.aiResponse || ''}</p>
+            </div>
+        `).join('');
 }
 
+// --- SETUP FITUR ---
 function setupFitur() {
     const btnAction = document.getElementById('btnAction');
-    const btnSendText = document.getElementById('btnSendText');
+    const bgMusic = document.getElementById('bgMusic');
     const manualInput = document.getElementById('manualInput');
     const textPreview = document.getElementById('textPreview');
-    const bgMusic = document.getElementById('bgMusic');
 
     bgMusic.volume = 0.3;
 
@@ -162,45 +138,39 @@ function setupFitur() {
 
     if (recognizer) {
         recognizer.onresult = (event) => {
-            let resultText = "";
-            for (let i = event.resultIndex; i < event.results.length; ++i) {
-                resultText += event.results[i][0].transcript;
-            }
-            transcription = resultText;
+            let res = "";
+            for (let i = event.resultIndex; i < event.results.length; ++i) { res += event.results[i][0].transcript; }
+            transcription = res;
             textPreview.innerText = "Terdengar: " + transcription;
         };
     }
 
-    btnSendText.onclick = () => {
-        const teks = manualInput.value.trim();
-        if (teks) { dapatkanResponAI(teks); manualInput.value = ""; }
+    document.getElementById('btnSendText').onclick = () => {
+        const t = manualInput.value.trim();
+        if (t) { dapatkanResponAI(t); manualInput.value = ""; }
     };
 
     btnAction.onclick = async () => {
         if (!mediaRecorder || mediaRecorder.state === "inactive") {
             bgMusic.volume = 0.05;
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorder = new MediaRecorder(stream);
+            const s = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(s);
             audioChunks = []; transcription = ""; textPreview.innerText = "";
             mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
-            mediaRecorder.onstop = async () => {
+            mediaRecorder.onstop = () => {
                 bgMusic.volume = 0.3;
-                const blob = new Blob(audioChunks, { type: 'audio/wav' });
-                setTimeout(() => {
-                    uploadKeSupabase(blob);
-                    dapatkanResponAI(transcription || "Sesi jurnal suara tanpa kata.");
-                }, 1000);
+                setTimeout(() => { dapatkanResponAI(transcription || "Sesi suara tanpa teks."); }, 1000);
             };
             mediaRecorder.start();
             if (recognizer) recognizer.start();
             btnAction.innerText = "Selesai Bercerita";
-            btnAction.classList.replace('bg-[#8FBC8F]', 'bg-red-400');
+            btnAction.style.background = "#f87171";
             document.getElementById('status').classList.remove('hidden');
         } else {
             mediaRecorder.stop();
             if (recognizer) recognizer.stop();
             btnAction.innerText = "Mulai Bicara";
-            btnAction.classList.replace('bg-red-400', 'bg-[#8FBC8F]');
+            btnAction.style.background = "#8FBC8F";
             document.getElementById('status').classList.add('hidden');
         }
     };
