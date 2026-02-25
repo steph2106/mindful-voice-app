@@ -2,7 +2,7 @@
 import { dailyPrompts } from './prompts.js';
 
 // Ambil kunci dari Environment Variables Netlify
-const SUPABASE_URL = 'ntxvoxscznwovxhelyrv'; // Nanti ini akan otomatis terisi jika pakai process.env atau ganti manual sementara
+const SUPABASE_URL = 'https://ntxvoxscznwovxhelyrv.supabase.co'; // Nanti ini akan otomatis terisi jika pakai process.env atau ganti manual sementara
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im50eHZveHNjem53b3Z4aGVseXJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE5NzA4ODUsImV4cCI6MjA4NzU0Njg4NX0.aHCqqAqXz_YQbzCy7qQ7D6IGXZUj-7zOoP40EE4Sg0I'; 
 const GEMINI_API_KEY = 'AIzaSyC5OVWRrSJZMHt_7uXMC7e1lU5hTMng8_U';
 
