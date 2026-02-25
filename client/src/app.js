@@ -1,181 +1,129 @@
 import { dailyPrompts } from './prompts.js';
 
-const MUSIC_URL = 'https://ntxvoxscznwovxhelyrv.supabase.co/storage/v1/object/public/assets/Clearing%20the%20Mind.mp3';
-const appDiv = document.getElementById('app');
+// Load library PDF secara dinamis
+const pdfScript = document.createElement('script');
+pdfScript.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+document.head.appendChild(pdfScript);
 
+const appDiv = document.getElementById('app');
 let mediaRecorder;
 let audioChunks = [];
 
 function tampilkanAplikasi() {
     const dataSoal = dailyPrompts[0];
     appDiv.innerHTML = `
-        <audio id="bgMusic" loop src="${MUSIC_URL}"></audio>
-        <div class="max-w-md mx-auto mt-10 p-8 bg-white rounded-[32px] shadow-xl text-center border border-gray-50 font-sans">
-            <h2 class="text-[#4A5D4F] text-xl font-bold mb-6 text-left">MindfulJournal <span class="text-[10px] text-green-500 font-normal">● Kualitas HD</span></h2>
+        <div class="max-w-md mx-auto mt-10 p-8 bg-white rounded-[32px] shadow-xl font-sans border border-gray-100">
+            <h2 class="text-xl font-bold text-[#4A5D4F] mb-6">Jurnal Pribadi</h2>
             
-            <div class="p-6 bg-[#FDFBF7] rounded-2xl border-l-4 border-[#8FBC8F] mb-6 text-left shadow-sm">
-                <p class="text-lg italic text-[#4A5D4F]">"${dataSoal.text}"</p>
+            <div class="p-4 bg-gray-50 rounded-2xl mb-6 border-l-4 border-green-400">
+                <p class="italic text-sm text-gray-600">"${dataSoal.text}"</p>
             </div>
 
-            <div class="mb-8 p-5 border-2 border-dashed border-gray-100 rounded-3xl bg-gray-50/50">
-                <button id="btnAction" class="w-full py-4 bg-[#8FBC8F] text-white rounded-2xl font-bold shadow-lg transition-all active:scale-95">
-                    MULAI REKAM SUARA
-                </button>
-                <div id="status" class="hidden mt-3 flex items-center justify-center gap-2">
-                    <span class="w-2 h-2 bg-red-500 rounded-full animate-ping"></span>
-                    <span class="text-red-500 text-[11px] font-bold">MIC AKTIF: BERBICARALAH...</span>
+            <div class="mb-6">
+                <button id="btnAction" class="w-full py-4 bg-red-500 text-white rounded-2xl font-bold shadow-lg">Mulai Rekam Suara</button>
+                <p id="status" class="hidden text-red-500 text-[10px] mt-2 animate-pulse">● MEREKAM...</p>
+            </div>
+
+            <div class="mb-6">
+                <textarea id="manualInput" placeholder="Tulis di sini..." class="w-full p-4 rounded-2xl border bg-gray-50 min-h-[100px] outline-none focus:border-green-400"></textarea>
+                <div class="grid grid-cols-2 gap-2 mt-2">
+                    <button id="btnSaveTxt" class="py-2 bg-gray-800 text-white rounded-xl text-xs font-bold">Simpan .TXT</button>
+                    <button id="btnSavePdf" class="py-2 bg-blue-600 text-white rounded-xl text-xs font-bold">Simpan .PDF</button>
                 </div>
             </div>
-
-            <div class="mb-6 text-left">
-                <textarea id="manualInput" placeholder="Atau tulis di sini..." 
-                    class="w-full p-4 rounded-2xl border border-gray-200 text-sm outline-none bg-white min-h-[100px]"></textarea>
-                <button id="btnSaveNote" class="w-full mt-3 py-3 bg-[#4A5D4F] text-white rounded-2xl font-bold shadow-md active:scale-95">
-                    Simpan Catatan (.txt)
-                </button>
-            </div>
             
-            <div class="mt-10 border-t border-gray-100 pt-6">
-                <h3 class="text-[10px] font-bold text-gray-400 mb-4 uppercase text-left tracking-widest">Riwayat Jurnal</h3>
-                <div id="daftarRekaman" class="space-y-4"></div>
+            <div class="mt-8 border-t pt-4">
+                <p class="text-[10px] font-bold text-gray-400 uppercase mb-4">Riwayat</p>
+                <div id="daftar" class="space-y-3"></div>
             </div>
         </div>
     `;
-    updateDaftarUI();
-    setupFitur();
+    updateUI();
+    setup();
 }
 
-async function startRecording() {
-    try {
-        const bgMusic = document.getElementById('bgMusic');
-        bgMusic.volume = 0.05; 
-
-        // 1. Ambil Stream dengan kualitas tertinggi
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-            audio: {
-                echoCancellation: true,
-                noiseSuppression: true,
-                autoGainControl: true,
-                channelCount: 1, // Mono lebih stabil untuk suara manusia
-                sampleRate: 44100
-            } 
-        });
-
-        // 2. Tentukan format yang PASTI jalan di HP/Browser
-        const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
-                         ? 'audio/webm;codecs=opus' 
-                         : 'audio/webm';
-
-        mediaRecorder = new MediaRecorder(stream, { 
-            mimeType,
-            audioBitsPerSecond: 128000 // Kualitas setara MP3 standar
-        });
-
-        audioChunks = [];
-
-        mediaRecorder.ondataavailable = (e) => {
-            if (e.data && e.data.size > 0) {
-                audioChunks.push(e.data);
-            }
-        };
-
-        mediaRecorder.onstop = () => {
-            bgMusic.volume = 0.3;
-            
-            // 3. Gabungkan data menjadi Blob
-            const blob = new Blob(audioChunks, { type: mimeType });
-            const url = URL.createObjectURL(blob);
-            const fileName = `Jurnal_${Date.now()}.webm`;
-
-            // Simpan ke riwayat agar tidak hilang
-            simpanKeRiwayat({ type: 'voice', content: 'Jurnal Suara (Rekaman)', fileUrl: url, fileName: fileName });
-            
-            // Link download otomatis
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = fileName;
-            a.click();
-
-            // Matikan mic agar tidak error di rekaman berikutnya
-            stream.getTracks().forEach(track => track.stop());
-        };
-
-        // 4. KUNCI KUALITAS: Ambil data setiap 500ms agar memori tidak penuh
-        mediaRecorder.start(500); 
-        
-        document.getElementById('btnAction').innerText = "BERHENTI & SIMPAN";
-        document.getElementById('btnAction').style.background = "#f87171";
-        document.getElementById('status').classList.remove('hidden');
-
-    } catch (err) {
-        alert("Mic Gagal: " + err.message);
-    }
-}
-
-// --- FUNGSI RIWAYAT ---
-function simpanKeRiwayat(data) {
-    let riwayat = JSON.parse(localStorage.getItem('journal_final_v3') || '[]');
-    riwayat.unshift({ ...data, date: new Date().toLocaleString('id-ID') });
-    localStorage.setItem('journal_final_v3', JSON.stringify(riwayat));
-    updateDaftarUI();
-}
-
-window.hapusJurnal = function(index) {
-    let riwayat = JSON.parse(localStorage.getItem('journal_final_v3') || '[]');
-    riwayat.splice(index, 1);
-    localStorage.setItem('journal_final_v3', JSON.stringify(riwayat));
-    updateDaftarUI();
-};
-
-function updateDaftarUI() {
-    const container = document.getElementById('daftarRekaman');
-    const riwayat = JSON.parse(localStorage.getItem('journal_final_v3') || '[]');
-    container.innerHTML = riwayat.length === 0 ? '<p class="text-[11px] text-gray-300 italic text-left">Belum ada jurnal.</p>' : 
-        riwayat.map((item, index) => `
-            <div class="p-4 bg-gray-50 rounded-2xl border border-gray-100 text-left">
-                <div class="flex justify-between items-center mb-2">
-                    <span class="text-[9px] font-bold text-gray-400">${item.date}</span>
-                    <button onclick="hapusJurnal(${index})" class="text-red-400 text-[10px]">Hapus ×</button>
-                </div>
-                <p class="text-xs text-[#4A5D4F] mb-3 leading-relaxed">${item.content}</p>
-                <a href="${item.fileUrl}" download="${item.fileName}" class="inline-block bg-white border border-[#8FBC8F] text-[#8FBC8F] text-[10px] px-3 py-1.5 rounded-xl font-bold">
-                    📥 Ambil File ${item.type === 'voice' ? 'Audio' : 'Teks'}
-                </a>
-            </div>
-        `).join('');
-}
-
-function setupFitur() {
+function setup() {
     const btnAction = document.getElementById('btnAction');
-    const btnSaveNote = document.getElementById('btnSaveNote');
-    const bgMusic = document.getElementById('bgMusic');
+    const input = document.getElementById('manualInput');
 
-    document.getElementById('btnMusic').onclick = function() {
-        if (bgMusic.paused) { bgMusic.play(); this.innerText = "Musik Nyala 🎵"; }
-        else { bgMusic.pause(); this.innerText = "Mulai Musik 🎵"; }
-    };
-
-    btnAction.onclick = () => {
+    // LOGIKA REKAM (VERSI PALING DASAR)
+    btnAction.onclick = async () => {
         if (!mediaRecorder || mediaRecorder.state === "inactive") {
-            startRecording();
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
+            
+            mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(audioChunks, { type: 'audio/wav' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `Suara_${Date.now()}.wav`;
+                link.click(); // Langsung download ke HP
+                simpan('voice', 'Rekaman Suara', url);
+            };
+
+            mediaRecorder.start();
+            btnAction.innerText = "BERHENTI";
+            document.getElementById('status').classList.remove('hidden');
         } else {
             mediaRecorder.stop();
-            btnAction.innerText = "MULAI REKAM SUARA";
-            btnAction.style.background = "#8FBC8F";
+            btnAction.innerText = "Mulai Rekam Suara";
             document.getElementById('status').classList.add('hidden');
         }
     };
 
-    btnSaveNote.onclick = () => {
-        const text = document.getElementById('manualInput').value.trim();
-        if (!text) return;
-        const blob = new Blob([text], { type: 'text/plain' });
+    // SIMPAN TXT
+    document.getElementById('btnSaveTxt').onclick = () => {
+        const t = input.value; if(!t) return;
+        const blob = new Blob([t], {type:'text/plain'});
         const url = URL.createObjectURL(blob);
-        const name = `Note_${Date.now()}.txt`;
-        simpanKeRiwayat({ type: 'text', content: text, fileUrl: url, fileName: name });
-        const a = document.createElement('a'); a.href = url; a.download = name; a.click();
-        document.getElementById('manualInput').value = "";
+        const a = document.createElement('a');
+        a.href = url; a.download = `Catatan_${Date.now()}.txt`; a.click();
+        simpan('text', t);
+        input.value = "";
     };
+
+    // SIMPAN PDF
+    document.getElementById('btnSavePdf').onclick = () => {
+        const t = input.value; if(!t) return;
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        doc.text(t, 10, 10);
+        doc.save(`Catatan_${Date.now()}.pdf`);
+        simpan('text', t);
+        input.value = "";
+    };
+}
+
+function simpan(type, content, url = '') {
+    let r = JSON.parse(localStorage.getItem('jurnal_final') || '[]');
+    r.unshift({ type, content, url, date: new Date().toLocaleString() });
+    localStorage.setItem('jurnal_final', JSON.stringify(r));
+    updateUI();
+}
+
+window.hapus = (i) => {
+    let r = JSON.parse(localStorage.getItem('jurnal_final') || '[]');
+    r.splice(i, 1);
+    localStorage.setItem('jurnal_final', JSON.stringify(r));
+    updateUI();
+};
+
+function updateUI() {
+    const d = document.getElementById('daftar');
+    const r = JSON.parse(localStorage.getItem('jurnal_final') || '[]');
+    d.innerHTML = r.map((item, i) => `
+        <div class="p-3 bg-gray-50 rounded-xl text-left border">
+            <div class="flex justify-between text-[9px] mb-1">
+                <span>${item.date}</span>
+                <button onclick="hapus(${i})" class="text-red-500">Hapus</button>
+            </div>
+            <p class="text-xs mb-2">${item.content}</p>
+            ${item.url ? `<a href="${item.url}" download class="text-[10px] text-blue-600 font-bold">Download Audio</a>` : ''}
+        </div>
+    `).join('');
 }
 
 tampilkanAplikasi();
