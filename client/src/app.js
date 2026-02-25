@@ -145,44 +145,54 @@ function setupFitur() {
         }
     };
 
-    // BAGIAN PENTING: Menangkap suara dengan lebih stabil
-    if (recognizer) {
-        recognizer.onresult = (event) => {
-            transcription = Array.from(event.results)
-                .map(result => result[0].transcript)
-                .join('');
-            console.log("Teks terdeteksi:", transcription); // Cek ini di Console (F12)
-        };
-    }
+    // --- BAGIAN PENGENALAN SUARA (PASTIKAN INI JALAN) ---
+if (recognizer) {
+    recognizer.onstart = () => {
+        console.log("Speech Recognition: Mulai mendengarkan...");
+        transcription = ""; // Pastikan bersih setiap mulai
+    };
 
-    btnAction.onclick = async () => {
-        if (!mediaRecorder || mediaRecorder.state === "inactive") {
-            // MULAI REKAM
-            bgMusic.volume = 0.05; // Kecilkan musik saat rekam
-            const stream = await navigator.mediaDevices.getUserMedia({ 
-                audio: { echoCancellation: true, noiseSuppression: true } 
-            });
-            
+    recognizer.onresult = (event) => {
+        // Mengambil teks paling update dari suara kamu
+        let currentText = "";
+        for (let i = 0; i < event.results.length; i++) {
+            currentText += event.results[i][0].transcript;
+        }
+        transcription = currentText;
+        console.log("Teks yang tertangkap:", transcription); 
+    };
+
+    recognizer.onerror = (event) => {
+        console.error("Speech Recognition Error:", event.error);
+    };
+}
+
+btnAction.onclick = async () => {
+    if (!mediaRecorder || mediaRecorder.state === "inactive") {
+        // START RECORDING
+        bgMusic.volume = 0.05;
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             mediaRecorder = new MediaRecorder(stream);
             audioChunks = [];
-            transcription = ""; // Reset teks setiap mulai rekam baru
-
+            
             mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
             mediaRecorder.onstop = async () => {
-                bgMusic.volume = 0.3; // Kembalikan volume musik
+                bgMusic.volume = 0.3;
                 const blob = new Blob(audioChunks, { type: 'audio/wav' });
                 
-                // TUNGGU 1 DETIK: Agar browser selesai mengubah suara terakhir jadi teks
+                // JEDA 1.5 DETIK (Agar Speech Recognition benar-benar selesai memproses)
                 setTimeout(() => {
                     uploadKeSupabase(blob);
                     
-                    // VALIDASI: Jika teks kosong, beri tahu AI agar tidak memberi jawaban template
-                    const teksUntukAI = (transcription && transcription.trim().length > 3) 
-                        ? transcription 
-                        : "Pengguna hanya diam atau suaranya tidak jelas terdeteksi.";
-                    
-                    dapatkanResponAI(teksUntukAI);
-                }, 1000);
+                    // CEK TERAKHIR: Kalau masih kosong, kita paksa AI merespon "kebisuan"
+                    const hasilTeks = transcription.trim();
+                    if (hasilTeks.length > 0) {
+                        dapatkanResponAI(hasilTeks);
+                    } else {
+                        dapatkanResponAI("Pengguna baru saja merekam suara tapi teksnya tidak terdeteksi. Berikan sapaan hangat dan tanyakan apakah ada yang ingin diceritakan lagi.");
+                    }
+                }, 1500);
             };
 
             mediaRecorder.start();
@@ -191,16 +201,15 @@ function setupFitur() {
             btnAction.innerText = "Selesai Bercerita";
             btnAction.style.background = "#f87171";
             status.classList.remove('hidden');
-        } else {
-            // BERHENTI REKAM
-            mediaRecorder.stop();
-            if (recognizer) recognizer.stop();
-            btnAction.innerText = "Mulai Bicara";
-            btnAction.style.background = "#8FBC8F";
-            status.classList.add('hidden');
+        } catch (err) {
+            alert("Mic tidak aktif: " + err);
         }
-    };
-}
-
-// Jangan lupa panggil fungsinya di paling bawah
-tampilkanAplikasi();
+    } else {
+        // STOP RECORDING
+        mediaRecorder.stop();
+        if (recognizer) recognizer.stop();
+        btnAction.innerText = "Mulai Bicara";
+        btnAction.style.background = "#8FBC8F";
+        status.classList.add('hidden');
+    }
+};
