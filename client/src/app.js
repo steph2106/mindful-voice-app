@@ -70,12 +70,22 @@ function tampilkanAplikasi() {
 async function dapatkanResponAI(teksCerita) {
     const aiTextElement = document.getElementById('aiText');
     const responseArea = document.getElementById('aiResponseArea');
+    
+    // Tampilkan area respon dan beri tanda loading
     responseArea.classList.remove('hidden');
-    aiTextElement.innerText = "Sedang merespon...";
+    aiTextElement.innerText = "Sedang merespon ceritamu...";
+
+    // Cek apakah transkripsi suara berhasil ditangkap
+    console.log("Teks yang dikirim ke AI:", teksCerita);
 
     try {
-        const promptSystem = "Kamu adalah MindfulVoice, teman curhat yang sangat hangat, empatik, dan tulus. Gunakan bahasa Indonesia santai (aku-kamu).";
-        const promptUser = `Seseorang baru saja bercerita: "${teksCerita}". Berikan respon singkat (maksimal 2 kalimat) yang memvalidasi perasaannya dan beri semangat.`;
+        // PROMPT DINAMIS: Inilah yang membuat AI menjawab sesuai curhatan
+        const promptSystem = "Kamu adalah MindfulVoice, teman curhat yang sangat hangat dan tulus. Gunakan bahasa Indonesia santai (aku-kamu).";
+        const promptUser = `Seseorang baru saja bercerita hal ini padamu: "${teksCerita}". 
+                            Tolong berikan respon singkat (1-2 kalimat) yang:
+                            1. Menanggapi langsung isi ceritanya (nyambung).
+                            2. Menunjukkan rasa empati yang dalam.
+                            3. Memberi sedikit penguatan moral.`;
 
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
             method: 'POST',
@@ -86,11 +96,18 @@ async function dapatkanResponAI(teksCerita) {
         });
         
         const data = await response.json();
-        const hasilAI = data.candidates[0].content.parts[0].text;
-        aiTextElement.innerText = hasilAI;
+        
+        // Ambil hasil teks dari Gemini
+        if (data.candidates && data.candidates[0].content.parts[0].text) {
+            const hasilAI = data.candidates[0].content.parts[0].text;
+            aiTextElement.innerText = hasilAI;
+        } else {
+            throw new Error("Respon AI kosong");
+        }
+
     } catch (err) {
         console.error("AI Error:", err);
-        aiTextElement.innerText = "Terima kasih sudah berbagi. Aku di sini mendengarkanmu. Kamu hebat.";
+        aiTextElement.innerText = "Aku mendengarkanmu. Terima kasih sudah mau berbagi hal itu hari ini. Kamu tidak sendirian.";
     }
 }
 
