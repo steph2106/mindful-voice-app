@@ -10,6 +10,8 @@ const appDiv = document.getElementById('app');
 
 let mediaRecorder;
 let audioChunks = [];
+let audioContext;
+let audioSource;
 
 function tampilkanAplikasi() {
     const dataSoal = dailyPrompts[0];
@@ -38,7 +40,7 @@ function tampilkanAplikasi() {
 
             <div class="mb-6 text-left">
                 <textarea id="manualInput" placeholder="Tulis ceritamu di sini..." 
-                    class="w-full p-5 rounded-2xl border border-gray-200 text-sm focus:ring-2 focus:ring-[#8FBC8F] outline-none bg-white min-h-[100px]"></textarea>
+                    class="w-full p-5 rounded-2xl border border-gray-200 text-sm focus:ring-2 focus:ring-[#8FBC8F] outline-none bg-white min-h-[100px] shadow-inner"></textarea>
                 
                 <div class="grid grid-cols-2 gap-3 mt-4">
                     <button id="btnSavePdf" class="py-3 bg-[#4A5D4F] text-white rounded-xl font-bold text-xs shadow-md">Simpan PDF</button>
@@ -60,14 +62,18 @@ async function startRecording() {
     try {
         const bgMusic = document.getElementById('bgMusic');
         
-        // PENTING: Jangan matikan musik, biarkan jalan tapi volume dikontrol
-        if (!bgMusic.paused) {
-            bgMusic.volume = 0.1; // Volume musik rendah agar mic jernih
+        // Agar musik tidak mati di Android/iOS saat mic aktif:
+        // Kita gunakan AudioContext untuk memicu stream audio yang konstan
+        if (!audioContext) {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioContext.state === 'suspended') {
+            await audioContext.resume();
         }
 
         const stream = await navigator.mediaDevices.getUserMedia({ 
             audio: {
-                echoCancellation: false, // MATIKAN agar musik tidak bentrok dengan mic
+                echoCancellation: false, 
                 noiseSuppression: false,
                 autoGainControl: true
             } 
@@ -79,11 +85,9 @@ async function startRecording() {
         mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data); };
 
         mediaRecorder.onstop = () => {
-            if (!bgMusic.paused) bgMusic.volume = 0.3;
             const blob = new Blob(audioChunks, { type: 'audio/webm' });
             const url = URL.createObjectURL(blob);
             const name = `MindfulVoice_${Date.now()}.webm`;
-
             simpanKeRiwayat({ type: 'voice', content: 'Rekaman Suara Jurnal', fileUrl: url, fileName: name });
             
             const a = document.createElement('a');
@@ -94,7 +98,7 @@ async function startRecording() {
         mediaRecorder.start();
         updateUI(true);
     } catch (err) { 
-        alert("Akses Mic Ditolak! Cek izin browser."); 
+        alert("Gagal rekam: " + err.message); 
     }
 }
 
@@ -107,22 +111,22 @@ function updateUI(isRecording) {
 }
 
 function simpanKeRiwayat(data) {
-    let riwayat = JSON.parse(localStorage.getItem('mindfulvoice_final') || '[]');
+    let riwayat = JSON.parse(localStorage.getItem('mindfulvoice_v6') || '[]');
     riwayat.unshift({ ...data, date: new Date().toLocaleString('id-ID') });
-    localStorage.setItem('mindfulvoice_final', JSON.stringify(riwayat));
+    localStorage.setItem('mindfulvoice_v6', JSON.stringify(riwayat));
     updateDaftarUI();
 }
 
 window.hapusJurnal = function(index) {
-    let riwayat = JSON.parse(localStorage.getItem('mindfulvoice_final') || '[]');
+    let riwayat = JSON.parse(localStorage.getItem('mindfulvoice_v6') || '[]');
     riwayat.splice(index, 1);
-    localStorage.setItem('mindfulvoice_final', JSON.stringify(riwayat));
+    localStorage.setItem('mindfulvoice_v6', JSON.stringify(riwayat));
     updateDaftarUI();
 };
 
 function updateDaftarUI() {
     const container = document.getElementById('daftarRekaman');
-    const riwayat = JSON.parse(localStorage.getItem('mindfulvoice_final') || '[]');
+    const riwayat = JSON.parse(localStorage.getItem('mindfulvoice_v6') || '[]');
     container.innerHTML = riwayat.length === 0 ? '<p class="text-[11px] text-gray-300 italic text-left">Belum ada riwayat.</p>' : 
         riwayat.map((item, index) => `
             <div class="p-4 bg-gray-50 rounded-2xl border border-gray-100 text-left">
@@ -130,8 +134,8 @@ function updateDaftarUI() {
                     <span class="text-[9px] font-bold text-gray-400 uppercase">${item.date}</span>
                     <button onclick="hapusJurnal(${index})" class="text-red-400 text-[10px] font-bold">Hapus ×</button>
                 </div>
-                <p class="text-xs text-[#4A5D4F] mb-3">${item.content}</p>
-                <a href="${item.fileUrl}" download="${item.fileName}" class="inline-block bg-white border border-gray-200 text-[10px] px-3 py-1.5 rounded-xl font-bold text-gray-600 shadow-sm">
+                <p class="text-xs text-[#4A5D4F] mb-3 leading-relaxed">${item.content}</p>
+                <a href="${item.fileUrl}" download="${item.fileName}" class="inline-block bg-white border border-gray-200 text-[10px] px-3 py-1.5 rounded-xl font-bold text-gray-600 shadow-sm active:bg-gray-100">
                     📥 Download Audio
                 </a>
             </div>
@@ -143,9 +147,14 @@ function setupFitur() {
     const bgMusic = document.getElementById('bgMusic');
     const btnMusic = document.getElementById('btnMusic');
 
-    btnMusic.onclick = () => {
+    btnMusic.onclick = async () => {
+        // Resume AudioContext jika diperlukan (untuk Chrome/Safari)
+        if (audioContext && audioContext.state === 'suspended') {
+            await audioContext.resume();
+        }
+        
         if (bgMusic.paused) { 
-            bgMusic.play().catch(() => alert("Klik di mana saja dulu baru mulai musik!"));
+            bgMusic.play(); 
             bgMusic.volume = 0.3;
             btnMusic.innerText = "Musik Nyala 🎵"; 
         } else { 
@@ -175,9 +184,8 @@ function setupFitur() {
         if (!text) return;
         const blob = new Blob([text], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
-        const name = `Note_${Date.now()}.txt`;
-        simpanKeRiwayat({ type: 'text', content: text, fileUrl: url, fileName: name });
-        const a = document.createElement('a'); a.href = url; a.download = name; a.click();
+        simpanKeRiwayat({ type: 'text', content: text, fileUrl: url, fileName: 'txt' });
+        const a = document.createElement('a'); a.href = url; a.download = `Note_${Date.now()}.txt`; a.click();
         document.getElementById('manualInput').value = "";
     };
 }
