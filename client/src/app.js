@@ -137,7 +137,8 @@ function setupFitur() {
     const status = document.getElementById('status');
     const btnMusic = document.getElementById('btnMusic');
     const bgMusic = document.getElementById('bgMusic');
-
+// Tambahkan ini di bawah baris 139
+bgMusic.src = 'https://ntxvoxscznwovxhelyrv.supabase.co/storage/v1/object/public/assets/Clearing%20the%20Mind.mp3';
     btnMusic.onclick = () => {
         if (bgMusic.paused) { bgMusic.play(); btnMusic.innerText = "Matikan Musik 🔇"; }
         else { bgMusic.pause(); btnMusic.innerText = "Mulai Musik 🎵"; }
