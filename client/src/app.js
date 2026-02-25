@@ -91,12 +91,28 @@ async function dapatkanResponAI(teksCerita) {
         
         const data = await response.json();
         const hasilAI = data.candidates[0].content.parts[0].text;
+        
+        // Tampilkan di layar
         aiTextElement.innerText = hasilAI;
 
-        // Simpan ke Catatan HP setelah ada respon
-        console.log("Menyimpan jurnal ke catatan...");
+        // --- SIMPAN SEBAGAI NOTE ---
+        // 1. Simpan ke Riwayat Lokal (Agar muncul di daftar bawah)
+        let riwayat = JSON.parse(localStorage.getItem('my_recordings') || '[]');
+        riwayat.unshift({ 
+            name: "Catatan Teks", 
+            content: teksCerita, 
+            aiResponse: hasilAI,
+            date: new Date().toLocaleString('id-ID'),
+            isText: true 
+        });
+        localStorage.setItem('my_recordings', JSON.stringify(riwayat));
+        updateDaftarUI();
+
+        // 2. Notifikasi ke user bahwa sudah tersimpan
+        console.log("Jurnal disimpan ke Note HP: ", teksCerita);
+        
     } catch (err) {
-        aiTextElement.innerText = "Aku di sini mendengarkanmu. Kamu hebat sudah mau berbagi.";
+        aiTextElement.innerText = "Aku di sini mendengarkanmu. Terima kasih ya sudah mau berbagi sama aku. Pelan-pelan saja ya jalaninnya. Menerima keadaan memang paling sulit di dalam hidup kita. Tetapi setelah kamu terima semuanya itu dengan hati yang lapang, percayalah, kamu sudah maju ke langkah berikutnya";
     }
 }
 
