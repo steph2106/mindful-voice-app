@@ -133,11 +133,11 @@ function setupFitur() {
     const btnMusic = document.getElementById('btnMusic');
     const bgMusic = document.getElementById('bgMusic');
 
-    bgMusic.volume = 0.3;
+    bgMusic.volume = 0.3; // Volume normal musik latar
 
     btnMusic.onclick = () => {
         if (bgMusic.paused) {
-            bgMusic.play();
+            bgMusic.play().catch(e => console.log("Interaksi user diperlukan"));
             btnMusic.innerText = "Musik Nyala 🎵";
         } else {
             bgMusic.pause();
@@ -145,32 +145,44 @@ function setupFitur() {
         }
     };
 
+    // BAGIAN PENTING: Menangkap suara dengan lebih stabil
     if (recognizer) {
         recognizer.onresult = (event) => {
             transcription = Array.from(event.results)
                 .map(result => result[0].transcript)
                 .join('');
+            console.log("Teks terdeteksi:", transcription); // Cek ini di Console (F12)
         };
     }
 
     btnAction.onclick = async () => {
         if (!mediaRecorder || mediaRecorder.state === "inactive") {
-            bgMusic.volume = 0.05;
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            // MULAI REKAM
+            bgMusic.volume = 0.05; // Kecilkan musik saat rekam
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                audio: { echoCancellation: true, noiseSuppression: true } 
+            });
+            
             mediaRecorder = new MediaRecorder(stream);
             audioChunks = [];
-            transcription = ""; 
+            transcription = ""; // Reset teks setiap mulai rekam baru
 
             mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
             mediaRecorder.onstop = async () => {
-                bgMusic.volume = 0.3;
+                bgMusic.volume = 0.3; // Kembalikan volume musik
                 const blob = new Blob(audioChunks, { type: 'audio/wav' });
                 
-                // Menunggu sejenak agar Speech Recognition selesai memproses teks terakhir
+                // TUNGGU 1 DETIK: Agar browser selesai mengubah suara terakhir jadi teks
                 setTimeout(() => {
                     uploadKeSupabase(blob);
-                    dapatkanResponAI(transcription);
-                }, 500);
+                    
+                    // VALIDASI: Jika teks kosong, beri tahu AI agar tidak memberi jawaban template
+                    const teksUntukAI = (transcription && transcription.trim().length > 3) 
+                        ? transcription 
+                        : "Pengguna hanya diam atau suaranya tidak jelas terdeteksi.";
+                    
+                    dapatkanResponAI(teksUntukAI);
+                }, 1000);
             };
 
             mediaRecorder.start();
@@ -180,6 +192,7 @@ function setupFitur() {
             btnAction.style.background = "#f87171";
             status.classList.remove('hidden');
         } else {
+            // BERHENTI REKAM
             mediaRecorder.stop();
             if (recognizer) recognizer.stop();
             btnAction.innerText = "Mulai Bicara";
@@ -189,4 +202,5 @@ function setupFitur() {
     };
 }
 
+// Jangan lupa panggil fungsinya di paling bawah
 tampilkanAplikasi();
