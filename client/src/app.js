@@ -32,7 +32,7 @@ function tampilkanAplikasi() {
 
     if (dataSoal) {
         appDiv.innerHTML = `
-            <audio id="bgMusic" loop src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"></audio>
+            <audio id="bgMusic" loop src="https://ntxvoxscznwovxhelyrv.supabase.co/storage/v1/object/public/assets/Clearing%20the%20Mind.mp3"></audio>
             <div class="max-w-md mx-auto mt-10 p-8 bg-white rounded-[32px] shadow-xl font-sans text-center border border-gray-50">
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-[#4A5D4F] text-xl font-serif font-bold">MindfulVoice</h2>
