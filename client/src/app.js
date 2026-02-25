@@ -13,13 +13,12 @@ let mediaRecorder;
 let audioChunks = [];
 let transcription = ""; 
 
-// Inisialisasi Speech Recognition
 const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 const recognizer = Recognition ? new Recognition() : null;
 if (recognizer) {
     recognizer.lang = 'id-ID';
     recognizer.continuous = true;
-    recognizer.interimResults = false;
+    recognizer.interimResults = true; // Mengaktifkan hasil sementara agar lebih akurat
 }
 
 if (!localStorage.getItem('user_voice_id')) {
@@ -37,7 +36,7 @@ function tampilkanAplikasi() {
             <div class="max-w-md mx-auto mt-10 p-8 bg-white rounded-[32px] shadow-xl font-sans text-center border border-gray-50">
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-[#4A5D4F] text-xl font-bold">MindfulVoice</h2>
-                    <button id="btnMusic" class="text-[10px] bg-gray-100 px-3 py-1 rounded-full text-gray-500 transition-all">Putar Musik 🎵</button>
+                    <button id="btnMusic" class="text-[10px] bg-gray-100 px-3 py-1 rounded-full text-gray-500">Mulai Musik 🎵</button>
                 </div>
                 
                 <div class="p-6 bg-[#FDFBF7] rounded-2xl border-l-4 border-[#8FBC8F] mb-8 text-left shadow-sm">
@@ -47,7 +46,7 @@ function tampilkanAplikasi() {
 
                 <div id="status" class="hidden mb-4 text-red-500 animate-pulse font-bold text-sm text-center">● AI sedang mendengarkan...</div>
                 
-                <button id="btnAction" class="w-full py-4 bg-[#8FBC8F] text-white rounded-full font-bold shadow-lg hover:scale-[1.02] active:scale-95 transition-all">
+                <button id="btnAction" class="w-full py-4 bg-[#8FBC8F] text-white rounded-full font-bold shadow-lg transition-all">
                     Mulai Bicara
                 </button>
 
@@ -70,52 +69,34 @@ function tampilkanAplikasi() {
 async function dapatkanResponAI(teksCerita) {
     const aiTextElement = document.getElementById('aiText');
     const responseArea = document.getElementById('aiResponseArea');
-    
-    // Tampilkan area respon dan beri tanda loading
     responseArea.classList.remove('hidden');
-    aiTextElement.innerText = "Sedang merespon ceritamu...";
+    aiTextElement.innerText = "Berpikir...";
 
-    // Cek apakah transkripsi suara berhasil ditangkap
-    console.log("Teks yang dikirim ke AI:", teksCerita);
+    // Cek jika teks kosong, beri konteks default
+    const inputUser = (teksCerita && teksCerita.trim().length > 0) ? teksCerita : "Saya baru saja menyelesaikan sesi jurnal suara saya tanpa banyak bicara.";
 
     try {
-        // PROMPT DINAMIS: Inilah yang membuat AI menjawab sesuai curhatan
-        const promptSystem = "Kamu adalah MindfulVoice, teman curhat yang sangat hangat dan tulus. Gunakan bahasa Indonesia santai (aku-kamu).";
-        const promptUser = `Seseorang baru saja bercerita hal ini padamu: "${teksCerita}". 
-                            Tolong berikan respon singkat (1-2 kalimat) yang:
-                            1. Menanggapi langsung isi ceritanya (nyambung).
-                            2. Menunjukkan rasa empati yang dalam.
-                            3. Memberi sedikit penguatan moral.`;
+        const prompt = `Kamu adalah MindfulVoice, teman curhat yang hangat dan penuh empati. Seseorang baru saja bercerita hal ini: "${inputUser}". 
+        Berikan respon singkat (1-2 kalimat) yang sangat spesifik menanggapi apa yang dia katakan. 
+        Tunjukkan bahwa kamu benar-benar mendengarkan. Gunakan bahasa Indonesia santai (aku-kamu).`;
 
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: promptSystem + "\n\n" + promptUser }] }]
-            })
+            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
         });
         
         const data = await response.json();
-        
-        // Ambil hasil teks dari Gemini
-        if (data.candidates && data.candidates[0].content.parts[0].text) {
-            const hasilAI = data.candidates[0].content.parts[0].text;
-            aiTextElement.innerText = hasilAI;
-        } else {
-            throw new Error("Respon AI kosong");
-        }
-
+        aiTextElement.innerText = data.candidates[0].content.parts[0].text;
     } catch (err) {
-        console.error("AI Error:", err);
-        aiTextElement.innerText = "Aku mendengarkanmu. Terima kasih sudah mau berbagi hal itu hari ini. Kamu tidak sendirian.";
+        aiTextElement.innerText = "Terima kasih sudah berbagi ceritamu. Aku di sini mendengarkanmu. Kamu hebat.";
     }
 }
 
 async function uploadKeSupabase(blob) {
     const fileName = `jurnal-${Date.now()}.wav`;
     const filePath = `${userId}/${fileName}`;
-
-    const response = await fetch(`${SUPABASE_URL}/storage/v1/object/recordings/${filePath}`, {
+    await fetch(`${SUPABASE_URL}/storage/v1/object/recordings/${filePath}`, {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${SUPABASE_KEY}`,
@@ -124,34 +105,24 @@ async function uploadKeSupabase(blob) {
         },
         body: blob
     });
-
-    if (response.ok) {
-        let riwayat = JSON.parse(localStorage.getItem('my_recordings') || '[]');
-        riwayat.unshift({ name: fileName, path: filePath, date: new Date().toLocaleString('id-ID') });
-        localStorage.setItem('my_recordings', JSON.stringify(riwayat));
-        updateDaftarUI();
-        
-        // Kirim hasil teks ke AI
-        dapatkanResponAI(transcription || "Aku baru saja menyelesaikan jurnal suaraku.");
-    }
+    
+    let riwayat = JSON.parse(localStorage.getItem('my_recordings') || '[]');
+    riwayat.unshift({ name: fileName, path: filePath, date: new Date().toLocaleString('id-ID') });
+    localStorage.setItem('my_recordings', JSON.stringify(riwayat));
+    updateDaftarUI();
 }
 
 function updateDaftarUI() {
     const container = document.getElementById('daftarRekaman');
     const riwayat = JSON.parse(localStorage.getItem('my_recordings') || '[]');
-    
     if (riwayat.length === 0) {
         container.innerHTML = `<p class="text-left text-[10px] text-gray-300 italic">Belum ada rekaman.</p>`;
         return;
     }
-
     container.innerHTML = riwayat.map(item => `
         <div class="flex justify-between items-center p-3 bg-gray-50 rounded-xl border border-gray-100">
             <span class="text-[10px] font-bold text-gray-500">${item.date}</span>
-            <a href="${SUPABASE_URL}/storage/v1/object/public/recordings/${item.path}" 
-               target="_blank" class="text-[10px] bg-white border border-green-200 text-green-600 px-3 py-1 rounded-full font-bold shadow-sm">
-               Putar 🎧
-            </a>
+            <a href="${SUPABASE_URL}/storage/v1/object/public/recordings/${item.path}" target="_blank" class="text-[10px] bg-white border border-green-200 text-green-600 px-3 py-1 rounded-full font-bold shadow-sm">Putar 🎧</a>
         </div>
     `).join('');
 }
@@ -164,62 +135,55 @@ function setupFitur() {
 
     bgMusic.volume = 0.3;
 
-    // Logika Tombol Musik
     btnMusic.onclick = () => {
         if (bgMusic.paused) {
-            bgMusic.play().catch(e => console.log("User must interact first"));
+            bgMusic.play();
             btnMusic.innerText = "Musik Nyala 🎵";
-            btnMusic.classList.replace('bg-gray-100', 'bg-green-100');
         } else {
             bgMusic.pause();
             btnMusic.innerText = "Mulai Musik 🎵";
-            btnMusic.classList.replace('bg-green-100', 'bg-gray-100');
         }
     };
 
+    if (recognizer) {
+        recognizer.onresult = (event) => {
+            transcription = Array.from(event.results)
+                .map(result => result[0].transcript)
+                .join('');
+        };
+    }
+
     btnAction.onclick = async () => {
         if (!mediaRecorder || mediaRecorder.state === "inactive") {
-            try {
-                // Kecilkan musik saat rekam
-                bgMusic.volume = 0.05;
+            bgMusic.volume = 0.05;
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
+            transcription = ""; 
 
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    audio: { echoCancellation: true, noiseSuppression: true } 
-                });
+            mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
+            mediaRecorder.onstop = async () => {
+                bgMusic.volume = 0.3;
+                const blob = new Blob(audioChunks, { type: 'audio/wav' });
                 
-                mediaRecorder = new MediaRecorder(stream);
-                audioChunks = [];
-                transcription = ""; 
-                
-                mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
-                mediaRecorder.onstop = () => {
-                    // Kembalikan volume musik
-                    bgMusic.volume = 0.3;
-                    const blob = new Blob(audioChunks, { type: 'audio/wav' });
+                // Menunggu sejenak agar Speech Recognition selesai memproses teks terakhir
+                setTimeout(() => {
                     uploadKeSupabase(blob);
-                };
+                    dapatkanResponAI(transcription);
+                }, 500);
+            };
 
-                mediaRecorder.start();
-                if (recognizer) {
-                    recognizer.onresult = (event) => {
-                        transcription = Array.from(event.results)
-                            .map(result => result[0].transcript)
-                            .join('');
-                    };
-                    recognizer.start();
-                }
+            mediaRecorder.start();
+            if (recognizer) recognizer.start();
 
-                btnAction.innerText = "Selesai Bercerita";
-                btnAction.classList.replace('bg-[#8FBC8F]', 'bg-red-400');
-                status.classList.remove('hidden');
-            } catch (err) {
-                alert("Klik izinkan mikrofon ya untuk bercerita.");
-            }
+            btnAction.innerText = "Selesai Bercerita";
+            btnAction.style.background = "#f87171";
+            status.classList.remove('hidden');
         } else {
             mediaRecorder.stop();
             if (recognizer) recognizer.stop();
             btnAction.innerText = "Mulai Bicara";
-            btnAction.classList.replace('bg-red-400', 'bg-[#8FBC8F]');
+            btnAction.style.background = "#8FBC8F";
             status.classList.add('hidden');
         }
     };
