@@ -1,12 +1,12 @@
 import { dailyPrompts } from './prompts.js';
 
-// Load Library PDF secara otomatis
+// Memastikan Library PDF terpasang
 const script = document.createElement('script');
 script.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
 document.head.appendChild(script);
 
-// KONFIGURASI ASLI
-const MUSIC_URL = 'https://ntxvoxscznwovxhelyrv.supabase.co/storage/v1/object/public/assets/Clearing%20the%20Mind.mp3';
+// --- KONFIGURASI ---
+const MUSIC_URL = 'https://ntxvoxscznovxhelyrv.supabase.co/storage/v1/object/public/assets/Clearing%20the%20Mind.mp3';
 const appDiv = document.getElementById('app');
 
 let mediaRecorder;
@@ -18,8 +18,8 @@ function tampilkanAplikasi() {
         <audio id="bgMusic" loop src="${MUSIC_URL}"></audio>
         <div class="max-w-md mx-auto mt-10 p-8 bg-white rounded-[32px] shadow-xl text-center border border-gray-50 font-sans">
             <div class="flex justify-between items-center mb-6">
-                <h2 class="text-[#4A5D4F] text-xl font-bold">MindfulVoice</h2>
-                <button id="btnMusic" class="text-[10px] bg-gray-100 px-3 py-1 rounded-full text-gray-500 hover:bg-gray-200">Mulai Musik 🎵</button>
+                <h2 class="text-[#4A5D4F] text-xl font-bold">MindfulVoice App</h2>
+                <button id="btnMusic" class="text-[10px] bg-gray-100 px-3 py-1 rounded-full text-gray-500">Mulai Musik 🎵</button>
             </div>
             
             <div class="p-6 bg-[#FDFBF7] rounded-2xl border-l-4 border-[#8FBC8F] mb-6 text-left shadow-sm">
@@ -38,12 +38,12 @@ function tampilkanAplikasi() {
             </div>
 
             <div class="mb-6 text-left">
-                <textarea id="manualInput" placeholder="Atau tulis ceritamu di sini..." 
+                <textarea id="manualInput" placeholder="Tulis ceritamu di sini..." 
                     class="w-full p-4 rounded-2xl border border-gray-200 text-sm focus:ring-2 focus:ring-[#8FBC8F] outline-none bg-white min-h-[100px] shadow-inner"></textarea>
                 
                 <div class="grid grid-cols-2 gap-2 mt-4">
-                    <button id="btnSavePdf" class="py-3 bg-[#4A5D4F] text-white rounded-xl font-bold text-xs shadow-md active:scale-95">Simpan PDF</button>
-                    <button id="btnSaveTxt" class="py-3 bg-gray-100 text-gray-600 rounded-xl font-bold text-xs shadow-sm active:scale-95">Simpan Teks</button>
+                    <button id="btnSavePdf" class="py-3 bg-[#4A5D4F] text-white rounded-xl font-bold text-xs shadow-md">Simpan PDF</button>
+                    <button id="btnSaveTxt" class="py-3 bg-gray-200 text-gray-600 rounded-xl font-bold text-xs shadow-sm">Simpan Teks</button>
                 </div>
             </div>
             
@@ -60,14 +60,10 @@ function tampilkanAplikasi() {
 async function startRecording() {
     try {
         const bgMusic = document.getElementById('bgMusic');
-        bgMusic.volume = 0.05; // Kecilkan musik saat rekam agar suara jernih
+        bgMusic.volume = 0.05; 
 
         const stream = await navigator.mediaDevices.getUserMedia({ 
-            audio: {
-                echoCancellation: false, 
-                noiseSuppression: false,
-                autoGainControl: true 
-            } 
+            audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: true } 
         });
 
         mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
@@ -83,7 +79,6 @@ async function startRecording() {
 
             simpanKeRiwayat({ type: 'voice', content: 'Rekaman Suara Jurnal', fileUrl: url, fileName: name });
             
-            // Auto download hasil record
             const a = document.createElement('a');
             a.href = url; a.download = name; a.click();
 
@@ -104,22 +99,22 @@ function updateUI(isRecording) {
 }
 
 function simpanKeRiwayat(data) {
-    let riwayat = JSON.parse(localStorage.getItem('mindful_journal_v4') || '[]');
+    let riwayat = JSON.parse(localStorage.getItem('mindfulvoice_data') || '[]');
     riwayat.unshift({ ...data, date: new Date().toLocaleString('id-ID') });
-    localStorage.setItem('mindful_journal_v4', JSON.stringify(riwayat));
+    localStorage.setItem('mindfulvoice_data', JSON.stringify(riwayat));
     updateDaftarUI();
 }
 
 window.hapusJurnal = function(index) {
-    let riwayat = JSON.parse(localStorage.getItem('mindful_journal_v4') || '[]');
+    let riwayat = JSON.parse(localStorage.getItem('mindfulvoice_data') || '[]');
     riwayat.splice(index, 1);
-    localStorage.setItem('mindful_journal_v4', JSON.stringify(riwayat));
+    localStorage.setItem('mindfulvoice_data', JSON.stringify(riwayat));
     updateDaftarUI();
 };
 
 function updateDaftarUI() {
     const container = document.getElementById('daftarRekaman');
-    const riwayat = JSON.parse(localStorage.getItem('mindful_journal_v4') || '[]');
+    const riwayat = JSON.parse(localStorage.getItem('mindfulvoice_data') || '[]');
     container.innerHTML = riwayat.length === 0 ? '<p class="text-[11px] text-gray-300 italic text-left">Belum ada riwayat.</p>' : 
         riwayat.map((item, index) => `
             <div class="p-4 bg-gray-50 rounded-2xl border border-gray-100 text-left">
@@ -128,19 +123,15 @@ function updateDaftarUI() {
                     <button onclick="hapusJurnal(${index})" class="text-red-400 text-[10px] font-bold">Hapus ×</button>
                 </div>
                 <p class="text-xs text-[#4A5D4F] mb-3 leading-relaxed">${item.content}</p>
-                <div class="flex gap-2">
-                    <a href="${item.fileUrl}" download="${item.fileName}" class="inline-flex items-center bg-white border border-gray-200 text-[10px] px-3 py-1.5 rounded-xl font-bold text-gray-600 shadow-sm active:bg-gray-100">
-                        📥 Download ${item.type === 'voice' ? 'Audio' : 'File'}
-                    </a>
-                </div>
+                <a href="${item.fileUrl}" download="${item.fileName}" class="inline-flex items-center bg-white border border-gray-200 text-[10px] px-3 py-1.5 rounded-xl font-bold text-gray-600 shadow-sm active:bg-gray-100">
+                    📥 Download ${item.type === 'voice' ? 'Audio' : 'File'}
+                </a>
             </div>
         `).join('');
 }
 
 function setupFitur() {
     const btnAction = document.getElementById('btnAction');
-    const btnSavePdf = document.getElementById('btnSavePdf');
-    const btnSaveTxt = document.getElementById('btnSaveTxt');
     const bgMusic = document.getElementById('bgMusic');
 
     document.getElementById('btnMusic').onclick = function() {
@@ -153,7 +144,7 @@ function setupFitur() {
         else { mediaRecorder.stop(); updateUI(false); }
     };
 
-    btnSavePdf.onclick = () => {
+    document.getElementById('btnSavePdf').onclick = () => {
         const text = document.getElementById('manualInput').value.trim();
         if (!text) return alert("Ketik ceritamu dulu.");
         const { jsPDF } = window.jspdf;
@@ -165,7 +156,7 @@ function setupFitur() {
         document.getElementById('manualInput').value = "";
     };
 
-    btnSaveTxt.onclick = () => {
+    document.getElementById('btnSaveTxt').onclick = () => {
         const text = document.getElementById('manualInput').value.trim();
         if (!text) return;
         const blob = new Blob([text], { type: 'text/plain' });
