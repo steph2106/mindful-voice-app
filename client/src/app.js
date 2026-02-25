@@ -1,76 +1,89 @@
-// client/src/app.js
 import { dailyPrompts } from './prompts.js';
 
-// Ambil kunci dari Environment Variables Netlify
+// --- ISI KUNCI KAMU DI SINI ---
 const SUPABASE_URL = 'https://ntxvoxscznwovxhelyrv.supabase.co'; // Nanti ini akan otomatis terisi jika pakai process.env atau ganti manual sementara
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im50eHZveHNjem53b3Z4aGVseXJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE5NzA4ODUsImV4cCI6MjA4NzU0Njg4NX0.aHCqqAqXz_YQbzCy7qQ7D6IGXZUj-7zOoP40EE4Sg0I'; 
 const GEMINI_API_KEY = 'AIzaSyC5OVWRrSJZMHt_7uXMC7e1lU5hTMng8_U';
+
+// ------------------------------
 
 const appDiv = document.getElementById('app');
 let mediaRecorder;
 let audioChunks = [];
 
+// Buat ID Unik untuk HP ini agar tidak tertukar dengan orang lain
+if (!localStorage.getItem('user_voice_id')) {
+    localStorage.setItem('user_voice_id', 'user-' + Math.random().toString(36).substr(2, 9));
+}
+const userId = localStorage.getItem('user_voice_id');
+
 function tampilkanAplikasi() {
     const hariIni = 1; 
     const dataSoal = dailyPrompts.find(p => p.day === hariIni);
 
-    if (dataSoal) {
-        appDiv.innerHTML = `
-            <audio id="bgMusic" loop src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"></audio>
-            <div class="max-w-md mx-auto mt-10 p-8 bg-white rounded-[32px] shadow-xl font-sans">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-[#4A5D4F] text-xl font-serif">MindfulVoice</h2>
-                    <button id="btnMusic" class="text-xs bg-gray-100 px-3 py-1 rounded-full text-gray-500">Mulai Musik 🎵</button>
-                </div>
-                
-                <div class="p-6 bg-[#FDFBF7] rounded-2xl border-l-4 border-[#8FBC8F] mb-8 text-left">
-                    <p class="text-[10px] uppercase tracking-[2px] text-gray-400 mb-2">${dataSoal.focus}</p>
-                    <p class="text-lg italic text-[#4A5D4F]">"${dataSoal.text}"</p>
-                </div>
-
-                <div id="status" class="hidden mb-4 text-red-500 animate-pulse font-bold text-sm text-center">● Sedang Mendengarkan...</div>
-                
-                <button id="btnAction" class="w-full py-4 bg-[#8FBC8F] text-white rounded-full font-bold shadow-lg hover:scale-105 transition-all">
-                    Mulai Bicara
-                </button>
-
-                <div id="aiResponseArea" class="hidden mt-8 p-6 bg-blue-50 rounded-2xl text-left border border-blue-100">
-                    <p class="text-[10px] uppercase text-blue-400 font-bold mb-2">Teman AI Menjawab:</p>
-                    <p id="aiText" class="text-[#3A4A3F] leading-relaxed italic">Sedang berpikir...</p>
-                </div>
-                
-                <div id="areaDownload" class="hidden mt-6 p-4 bg-green-50 rounded-xl border border-green-100">
-                    <p class="text-xs text-green-700 mb-3">Rekamanmu tersimpan secara privat.</p>
-                    <a id="linkDownload" class="inline-block w-full bg-white border border-green-500 text-green-600 py-2 rounded-lg text-sm font-bold text-center">Unduh Rekaman ke HP 📥</a>
-                </div>
+    appDiv.innerHTML = `
+        <audio id="bgMusic" loop src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"></audio>
+        <div class="max-w-md mx-auto mt-10 p-8 bg-white rounded-[32px] shadow-xl font-sans">
+            <h2 class="text-[#4A5D4F] text-xl font-serif mb-6 text-center">MindfulVoice</h2>
+            
+            <div class="p-6 bg-[#FDFBF7] rounded-2xl border-l-4 border-[#8FBC8F] mb-8 text-left">
+                <p class="text-lg italic text-[#4A5D4F]">"${dataSoal.text}"</p>
             </div>
-        `;
-        setupFitur();
-    }
+
+            <div id="status" class="hidden mb-4 text-red-500 animate-pulse font-bold text-center">● Sedang Mendengarkan...</div>
+            <button id="btnAction" class="w-full py-4 bg-[#8FBC8F] text-white rounded-full font-bold shadow-lg transition-all">Mulai Bicara</button>
+
+            <div id="aiResponseArea" class="hidden mt-8 p-6 bg-blue-50 rounded-2xl border border-blue-100">
+                <p class="text-[10px] uppercase text-blue-400 font-bold mb-2">Teman AI Menjawab:</p>
+                <p id="aiText" class="text-[#3A4A3F] italic">...</p>
+            </div>
+            
+            <div class="mt-10 border-t pt-6">
+                <h3 class="text-sm font-bold text-gray-500 mb-4 text-center uppercase tracking-widest">Riwayat Rekamanku</h3>
+                <div id="daftarRekaman" class="space-y-3">
+                    </div>
+            </div>
+        </div>
+    `;
+    updateDaftarUI();
+    setupFitur();
 }
 
-async function dapatkanResponAI(transcript) {
-    const aiTextElement = document.getElementById('aiText');
-    document.getElementById('aiResponseArea').classList.remove('hidden');
+// Fungsi menyimpan daftar link di HP (Local)
+function simpanKeRiwayatLokal(fileName) {
+    let riwayat = JSON.parse(localStorage.getItem('my_recordings') || '[]');
+    riwayat.unshift({ name: fileName, date: new Date().toLocaleString('id-ID') });
+    localStorage.setItem('my_recordings', JSON.stringify(riwayat));
+    updateDaftarUI();
+}
 
-    try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=AIzaSyC5OVWRrSJZMHt_7uXMC7e1lU5hTMng8_U`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: `Kamu adalah teman curhat yang sangat hangat dan empati. Responlah cerita singkat ini dengan tulus dan beri semangat kecil: ${transcript}` }] }]
-            })
-        });
-        const data = await response.json();
-        aiTextElement.innerText = data.candidates[0].content.parts[0].text;
-    } catch (err) {
-        aiTextElement.innerText = "Aku di sini mendengarkanmu. Kamu hebat sudah mau berbagi hari ini.";
+function updateDaftarUI() {
+    const container = document.getElementById('daftarRekaman');
+    const riwayat = JSON.parse(localStorage.getItem('my_recordings') || '[]');
+    
+    if (riwayat.length === 0) {
+        container.innerHTML = `<p class="text-center text-xs text-gray-300 italic">Belum ada rekaman tersimpan.</p>`;
+        return;
     }
+
+    container.innerHTML = riwayat.map(item => `
+        <div class="flex justify-between items-center p-3 bg-gray-50 rounded-xl border border-gray-100">
+            <span class="text-[10px] text-gray-500">${item.date}</span>
+            <a href="${SUPABASE_URL}/storage/v1/object/public/recordings/${userId}/${item.name}" 
+               download="${item.name}"
+               class="text-[10px] bg-white border border-[#8FBC8F] text-[#8FBC8F] px-3 py-1 rounded-full font-bold">
+               Download 📥
+            </a>
+        </div>
+    `).join('');
 }
 
 async function uploadKeSupabase(blob) {
     const fileName = `jurnal-${Date.now()}.wav`;
-    const response = await fetch(`${SUPABASE_URL}/storage/v1/object/recordings/${fileName}`, {
+    // Folder di Supabase akan dipisah per User ID
+    const filePath = `${userId}/${fileName}`;
+
+    const response = await fetch(`${SUPABASE_URL}/storage/v1/object/recordings/${filePath}`, {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${SUPABASE_KEY}`,
@@ -81,49 +94,10 @@ async function uploadKeSupabase(blob) {
     });
 
     if (response.ok) {
-        const url = window.URL.createObjectURL(blob);
-        const link = document.getElementById('linkDownload');
-        link.href = url;
-        link.download = fileName;
-        document.getElementById('areaDownload').classList.remove('hidden');
-        
-        // Pancing AI untuk merespon (Simulasi transkripsi sederhana)
-        dapatkanResponAI("Aku baru saja merekam perasaanku hari ini.");
+        simpanKeRiwayatLokal(fileName);
+        dapatkanResponAI("Aku sudah selesai bercerita.");
     }
 }
 
-function setupFitur() {
-    const btnAction = document.getElementById('btnAction');
-    const status = document.getElementById('status');
-    const btnMusic = document.getElementById('btnMusic');
-    const bgMusic = document.getElementById('bgMusic');
-
-    btnMusic.onclick = () => {
-        if (bgMusic.paused) { bgMusic.play(); btnMusic.innerText = "Matikan Musik 🔇"; }
-        else { bgMusic.pause(); btnMusic.innerText = "Mulai Musik 🎵"; }
-    };
-
-    btnAction.onclick = async () => {
-        if (!mediaRecorder || mediaRecorder.state === "inactive") {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorder = new MediaRecorder(stream);
-            audioChunks = [];
-            mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
-            mediaRecorder.onstop = () => {
-                const blob = new Blob(audioChunks, { type: 'audio/wav' });
-                uploadKeSupabase(blob);
-            };
-            mediaRecorder.start();
-            btnAction.innerText = "Selesai Bercerita";
-            btnAction.classList.replace('bg-[#8FBC8F]', 'bg-red-400');
-            status.classList.remove('hidden');
-        } else {
-            mediaRecorder.stop();
-            btnAction.innerText = "Mulai Bicara";
-            btnAction.classList.replace('bg-red-400', 'bg-[#8FBC8F]');
-            status.classList.add('hidden');
-        }
-    };
-}
-
-tampilkanAplikasi();
+// ... (Sisanya fungsi setupFitur dan dapatkanResponAI tetap sama seperti sebelumnya) ...
+// (Pastikan kamu tetap memanggil dapatkanResponAI dan setupFitur)
