@@ -54,7 +54,7 @@ async function dapatkanResponAI(transcript) {
     document.getElementById('aiResponseArea').classList.remove('hidden');
 
     try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${AIzaSyC5OVWRrSJZMHt_7uXMC7e1lU5hTMng8_U}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
