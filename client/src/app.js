@@ -11,10 +11,11 @@ const appDiv = document.getElementById('app');
 let mediaRecorder;
 let audioChunks = [];
 let audioContext;
-let audioSource;
 
 function tampilkanAplikasi() {
-    const dataSoal = dailyPrompts[0];
+    // Default ambil hari pertama
+    const defaultDay = dailyPrompts[0];
+
     appDiv.innerHTML = `
         <audio id="bgMusic" loop src="${MUSIC_URL}" crossorigin="anonymous"></audio>
         <div class="max-w-md mx-auto mt-10 p-8 bg-white rounded-[32px] shadow-xl text-center border border-gray-50 font-sans">
@@ -23,9 +24,15 @@ function tampilkanAplikasi() {
                 <button id="btnMusic" class="text-[10px] bg-gray-100 px-3 py-1 rounded-full text-gray-500">Mulai Musik 🎵</button>
             </div>
             
-            <div class="p-6 bg-[#FDFBF7] rounded-2xl border-l-4 border-[#8FBC8F] mb-6 text-left shadow-sm">
-                <p class="text-[10px] uppercase text-gray-400 mb-2 tracking-widest">${dataSoal.focus || 'Refleksi'}</p>
-                <p class="text-lg italic text-[#4A5D4F]">"${dataSoal.text}"</p>
+            <div class="mb-4 text-left">
+                <label class="text-[10px] font-bold text-gray-400 uppercase ml-1">Pilih Progres:</label>
+                <select id="selectDay" class="w-full mt-1 p-2 bg-gray-50 border border-gray-100 rounded-xl text-xs text-[#4A5D4F] outline-none focus:ring-1 focus:ring-[#8FBC8F]">
+                    ${dailyPrompts.map(p => `<option value="${p.day}">Hari ke-${p.day}</option>`).join('')}
+                </select>
+            </div>
+
+            <div id="promptContainer" class="p-6 bg-[#FDFBF7] rounded-2xl border-l-4 border-[#8FBC8F] mb-6 text-left shadow-sm transition-all">
+                <p id="promptText" class="text-lg italic text-[#4A5D4F]">"${defaultDay.text}"</p>
             </div>
 
             <div class="mb-8 p-6 border-2 border-dashed border-gray-100 rounded-[2rem] bg-gray-50/50">
@@ -34,7 +41,7 @@ function tampilkanAplikasi() {
                 </button>
                 <div id="status" class="hidden mt-4 flex items-center justify-center gap-2">
                     <span class="w-2 h-2 bg-red-500 rounded-full animate-ping"></span>
-                    <span class="text-red-500 text-[11px] font-bold">MEREKAM & MUSIK AKTIF</span>
+                    <span class="text-red-500 text-[11px] font-bold uppercase">Merekam...</span>
                 </div>
             </div>
 
@@ -44,7 +51,7 @@ function tampilkanAplikasi() {
                 
                 <div class="grid grid-cols-2 gap-3 mt-4">
                     <button id="btnSavePdf" class="py-3 bg-[#4A5D4F] text-white rounded-xl font-bold text-xs shadow-md">Simpan PDF</button>
-                    <button id="btnSaveTxt" class="py-3 bg-gray-200 text-gray-600 rounded-xl font-bold text-xs shadow-sm">Simpan Teks</button>
+                    <button id="btnSaveTxt" class="py-3 bg-gray-100 text-gray-600 rounded-xl font-bold text-xs shadow-sm">Simpan Teks</button>
                 </div>
             </div>
             
@@ -58,37 +65,38 @@ function tampilkanAplikasi() {
     setupFitur();
 }
 
+// FUNGSI GANTI PERTANYAAN
+function updatePrompt(day) {
+    const selected = dailyPrompts.find(p => p.day == day);
+    if (selected) {
+        document.getElementById('promptText').innerText = `"${selected.text}"`;
+    }
+}
+
 async function startRecording() {
     try {
         const bgMusic = document.getElementById('bgMusic');
-        
-        // Agar musik tidak mati di Android/iOS saat mic aktif:
-        // Kita gunakan AudioContext untuk memicu stream audio yang konstan
-        if (!audioContext) {
-            audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        }
-        if (audioContext.state === 'suspended') {
-            await audioContext.resume();
-        }
+        if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioContext.state === 'suspended') await audioContext.resume();
 
         const stream = await navigator.mediaDevices.getUserMedia({ 
-            audio: {
-                echoCancellation: false, 
-                noiseSuppression: false,
-                autoGainControl: true
-            } 
+            audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: true } 
         });
 
         mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
         audioChunks = [];
-
         mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data); };
 
         mediaRecorder.onstop = () => {
             const blob = new Blob(audioChunks, { type: 'audio/webm' });
             const url = URL.createObjectURL(blob);
-            const name = `MindfulVoice_${Date.now()}.webm`;
-            simpanKeRiwayat({ type: 'voice', content: 'Rekaman Suara Jurnal', fileUrl: url, fileName: name });
+            const name = `MindfulVoice_Hari${document.getElementById('selectDay').value}_${Date.now()}.webm`;
+            simpanKeRiwayat({ 
+                type: 'voice', 
+                content: `Jurnal Hari ke-${document.getElementById('selectDay').value}`, 
+                fileUrl: url, 
+                fileName: name 
+            });
             
             const a = document.createElement('a');
             a.href = url; a.download = name; a.click();
@@ -97,9 +105,7 @@ async function startRecording() {
 
         mediaRecorder.start();
         updateUI(true);
-    } catch (err) { 
-        alert("Gagal rekam: " + err.message); 
-    }
+    } catch (err) { alert("Mic Error: " + err.message); }
 }
 
 function updateUI(isRecording) {
@@ -111,22 +117,22 @@ function updateUI(isRecording) {
 }
 
 function simpanKeRiwayat(data) {
-    let riwayat = JSON.parse(localStorage.getItem('mindfulvoice_v6') || '[]');
+    let riwayat = JSON.parse(localStorage.getItem('mindfulvoice_dropdown_v1') || '[]');
     riwayat.unshift({ ...data, date: new Date().toLocaleString('id-ID') });
-    localStorage.setItem('mindfulvoice_v6', JSON.stringify(riwayat));
+    localStorage.setItem('mindfulvoice_dropdown_v1', JSON.stringify(riwayat));
     updateDaftarUI();
 }
 
 window.hapusJurnal = function(index) {
-    let riwayat = JSON.parse(localStorage.getItem('mindfulvoice_v6') || '[]');
+    let riwayat = JSON.parse(localStorage.getItem('mindfulvoice_dropdown_v1') || '[]');
     riwayat.splice(index, 1);
-    localStorage.setItem('mindfulvoice_v6', JSON.stringify(riwayat));
+    localStorage.setItem('mindfulvoice_dropdown_v1', JSON.stringify(riwayat));
     updateDaftarUI();
 };
 
 function updateDaftarUI() {
     const container = document.getElementById('daftarRekaman');
-    const riwayat = JSON.parse(localStorage.getItem('mindfulvoice_v6') || '[]');
+    const riwayat = JSON.parse(localStorage.getItem('mindfulvoice_dropdown_v1') || '[]');
     container.innerHTML = riwayat.length === 0 ? '<p class="text-[11px] text-gray-300 italic text-left">Belum ada riwayat.</p>' : 
         riwayat.map((item, index) => `
             <div class="p-4 bg-gray-50 rounded-2xl border border-gray-100 text-left">
@@ -134,8 +140,8 @@ function updateDaftarUI() {
                     <span class="text-[9px] font-bold text-gray-400 uppercase">${item.date}</span>
                     <button onclick="hapusJurnal(${index})" class="text-red-400 text-[10px] font-bold">Hapus ×</button>
                 </div>
-                <p class="text-xs text-[#4A5D4F] mb-3 leading-relaxed">${item.content}</p>
-                <a href="${item.fileUrl}" download="${item.fileName}" class="inline-block bg-white border border-gray-200 text-[10px] px-3 py-1.5 rounded-xl font-bold text-gray-600 shadow-sm active:bg-gray-100">
+                <p class="text-xs text-[#4A5D4F] mb-3">${item.content}</p>
+                <a href="${item.fileUrl}" download="${item.fileName}" class="inline-block bg-white border border-gray-200 text-[10px] px-3 py-1.5 rounded-xl font-bold text-gray-600 shadow-sm">
                     📥 Download Audio
                 </a>
             </div>
@@ -146,13 +152,12 @@ function setupFitur() {
     const btnAction = document.getElementById('btnAction');
     const bgMusic = document.getElementById('bgMusic');
     const btnMusic = document.getElementById('btnMusic');
+    const selectDay = document.getElementById('selectDay');
 
-    btnMusic.onclick = async () => {
-        // Resume AudioContext jika diperlukan (untuk Chrome/Safari)
-        if (audioContext && audioContext.state === 'suspended') {
-            await audioContext.resume();
-        }
-        
+    // Event listener dropdown
+    selectDay.onchange = (e) => updatePrompt(e.target.value);
+
+    btnMusic.onclick = () => {
         if (bgMusic.paused) { 
             bgMusic.play(); 
             bgMusic.volume = 0.3;
@@ -174,8 +179,8 @@ function setupFitur() {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         doc.text(text, 10, 10);
-        doc.save(`Note_${Date.now()}.pdf`);
-        simpanKeRiwayat({ type: 'text', content: text, fileUrl: '#', fileName: 'pdf' });
+        doc.save(`Jurnal_Hari_${selectDay.value}.pdf`);
+        simpanKeRiwayat({ type: 'text', content: `Teks Hari ke-${selectDay.value}`, fileUrl: '#', fileName: 'pdf' });
         document.getElementById('manualInput').value = "";
     };
 
@@ -184,8 +189,8 @@ function setupFitur() {
         if (!text) return;
         const blob = new Blob([text], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
-        simpanKeRiwayat({ type: 'text', content: text, fileUrl: url, fileName: 'txt' });
-        const a = document.createElement('a'); a.href = url; a.download = `Note_${Date.now()}.txt`; a.click();
+        simpanKeRiwayat({ type: 'text', content: `Teks Hari ke-${selectDay.value}`, fileUrl: url, fileName: 'txt' });
+        const a = document.createElement('a'); a.href = url; a.download = `Note_Hari_${selectDay.value}.txt`; a.click();
         document.getElementById('manualInput').value = "";
     };
 }
